@@ -98,6 +98,105 @@ aws logs describe-log-groups --log-group-name-prefix "/aws/eks/dev-demo"
 2. Check EC2 instances in the private subnets
 3. Verify security groups allow necessary traffic
 
+## Setting Up Ingress, Metrics, and Monitoring
+
+### Prerequisites for Advanced Setup
+
+1. **Install Helm** (if not already installed):
+```bash
+# Install Helm
+curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+# Verify installation
+helm version
+```
+
+2. **Install kubectl** (if not already installed):
+```bash
+# Download kubectl
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+
+# Make it executable
+chmod +x kubectl
+
+# Move to PATH
+sudo mv kubectl /usr/local/bin/
+
+# Verify installation
+kubectl version --client
+```
+
+### 1. Setting Up NGINX Ingress Controller
+
+```bash
+# Add NGINX Ingress Helm repository
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+helm repo update
+
+# Install NGINX Ingress Controller
+helm install nginx-ingress ingress-nginx/ingress-nginx \
+  --namespace ingress-nginx \
+  --create-namespace \
+  --set controller.service.type=LoadBalancer
+
+# Get the external IP
+kubectl get svc -n ingress-nginx nginx-ingress-ingress-nginx-controller
+```
+
+### 2. Setting Up Metrics Stack
+
+```bash
+# Install Metrics Server
+kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+
+# Verify installation
+kubectl get deployment metrics-server -n kube-system
+
+# Test metrics
+kubectl top nodes
+kubectl top pods --all-namespaces
+```
+### 6. Monitoring and Troubleshooting
+
+#### Check Ingress Status
+```bash
+# Check ingress resources
+kubectl get ingress --all-namespaces
+
+# Check ingress controller logs
+kubectl logs -n kube-system deployment/aws-load-balancer-controller
+```
+
+#### Check Metrics Stack
+```bash
+# Check metrics server status
+kubectl get pods -n kube-system | grep metrics-server
+
+# Test metrics functionality
+kubectl top nodes
+kubectl top pods --all-namespaces
+```
+
+#### Common Issues and Solutions
+
+1. **Ingress not working**:
+   ```bash
+   # Check if NGINX ingress controller is running
+   kubectl get pods -n ingress-nginx
+   
+   # Check NGINX ingress controller logs
+   kubectl logs -n ingress-nginx deployment/nginx-ingress-ingress-nginx-controller
+   ```
+
+2. **Metrics not showing**:
+   ```bash
+   # Check metrics server
+   kubectl get pods -n kube-system | grep metrics-server
+   
+   # Check if nodes are ready
+   kubectl get nodes
+   ```
+
 ## Cleanup
 
 To destroy all resources:
@@ -106,3 +205,4 @@ terraform destroy
 ```
 
 **Warning**: This will delete the entire EKS cluster and all associated resources.
+
